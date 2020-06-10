@@ -9,7 +9,7 @@ class quadexp(nn.Module):
         super(quadexp, self).__init__()
         self.sigma = sigma
 
-    def forward(self, x):
+    def forward(self, x: tr.Tensor):
         return tr.exp(-(x ** 2) / (self.sigma ** 2))
 
 

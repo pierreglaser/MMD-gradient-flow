@@ -17,7 +17,9 @@ def make_flags(args, config_file):
     return args
 
 
-parser = argparse.ArgumentParser(description="PyTorch CIFAR10 Training")
+parser = argparse.ArgumentParser(
+    description="pytorch-powered MMD gradient flow"
+)
 
 # Optimizer parameters
 parser.add_argument("--lr", default=0.1, type=float, help="learning rate")
@@ -55,8 +57,10 @@ parser.add_argument(
     "--noise_decay_freq",
     default=1000,
     type=int,
-    help=('decays the variance of the injected every 1000 epochs by a '
-          'factor "noise_decay"'),
+    help=(
+        "decays the variance of the injected every 1000 epochs by a "
+        "factor 'noise_decay'"
+    ),
 )
 parser.add_argument(
     "--noise_decay",
