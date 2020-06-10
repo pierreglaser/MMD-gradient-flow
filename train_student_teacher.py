@@ -120,6 +120,12 @@ parser.add_argument(
     help="num_particles*H = number of hidden units in the student network ",
 )
 
+parser.add_argument(
+    "--non_linearity",
+    default="quadexp",
+    help="non-linearity to apply after the network output layer",
+)
+
 # Initialization parameters
 parser.add_argument(
     "--mean_student",

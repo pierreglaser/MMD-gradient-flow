@@ -132,7 +132,7 @@ def get_data_gen(net, args, dtype, device):
 
 
 def get_net(args, dtype, device, net_type):
-    non_linearity = quadexp()
+    non_linearity = get_non_linearity(args.non_linearity)
     if net_type == "teacher":
         weights_init_net = partial(
             weights_init, {"mean": args.mean_teacher, "std": args.std_teacher}
@@ -142,7 +142,7 @@ def get_net(args, dtype, device, net_type):
                 args.d_int,
                 args.H,
                 args.d_out,
-                non_linearity=non_linearity,
+                non_linearity,
                 bias=args.bias,
             )
     if net_type == "student":
@@ -155,7 +155,7 @@ def get_net(args, dtype, device, net_type):
                 args.H,
                 args.d_out,
                 args.num_particles,
-                non_linearity=non_linearity,
+                non_linearity,
                 noise_level=args.noise_level,
                 noise_decay=args.noise_decay,
                 bias=args.bias,

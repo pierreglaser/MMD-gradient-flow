@@ -3,6 +3,20 @@ from torch.autograd import Variable
 import torch.nn as nn
 import torch.nn.functional as F
 
+_NON_LINEARITY_MODULES = {}
+
+
+def register_non_linearity(module: nn.Module):
+    _NON_LINEARITY_MODULES[module.__name__] = module
+
+
+def get_non_linearity(name: str):
+    module = _NON_LINEARITY_MODULES.get(name, None)
+    if module is None:
+        raise ValueError(f'unknown non linearity: {name}')
+    else:
+        return module()
+
 
 class quadexp(nn.Module):
     def __init__(self, sigma=2.0):
@@ -11,6 +25,31 @@ class quadexp(nn.Module):
 
     def forward(self, x: tr.Tensor):
         return tr.exp(-(x ** 2) / (self.sigma ** 2))
+
+
+register_non_linearity(quadexp)
+
+
+class cosine(nn.Module):
+    def __init__(self):
+        super(cosine, self).__init__()
+
+    def forward(self, x: tr.Tensor):
+        return tr.cos(x)
+
+
+register_non_linearity(cosine)
+
+
+class power(nn.Module):
+    def __init__(self):
+        super(power, self).__init__()
+
+    def forward(self, x: tr.Tensor):
+        return x.pow(2)
+
+
+register_non_linearity(power)
 
 
 class NoisyLinear(nn.Linear):
@@ -72,7 +111,7 @@ class NoisyLinear(nn.Linear):
 
 
 class OneHiddenLayer(nn.Module):
-    def __init__(self, d_int, H, d_out, non_linearity=quadexp(), bias=False):
+    def __init__(self, d_int, H, d_out, non_linearity, bias=False):
         super(OneHiddenLayer, self).__init__()
         self.linear1 = tr.nn.Linear(d_int, H, bias=bias)
         self.linear2 = tr.nn.Linear(H, d_out, bias=bias)
@@ -99,7 +138,7 @@ class NoisyOneHiddenLayer(nn.Module):
         H,
         d_out,
         n_particles,
-        non_linearity=quadexp(),
+        non_linearity,
         noise_level=1.0,
         noise_decay=0.1,
         bias=False,
