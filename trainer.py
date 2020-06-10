@@ -1,5 +1,7 @@
 from __future__ import print_function
 
+import logging
+
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -12,6 +14,9 @@ import sys, os, time, itertools
 
 from networks import *
 from losses import *
+
+
+logger = logging.getLogger('mmd_gradient_flow')
 
 
 class Trainer(object):
@@ -33,15 +38,20 @@ class Trainer(object):
             + str(args.noise_level),
         )
 
-        if not os.path.isdir(self.log_dir):
-            os.mkdir(self.log_dir)
-
+        logger.handlers[:] = []
         if args.log_in_file:
+            if not os.path.isdir(self.log_dir):
+                os.mkdir(self.log_dir)
+
             self.log_file = open(
                 os.path.join(self.log_dir, "log.txt"), "w", buffering=1
             )
-            sys.stdout = self.log_file
-        print("==> Building model..")
+            logger.addHandler(logging.FileHandler(self.log_file))
+        else:
+            logger.addHandler(logging.StreamHandler())
+        logger.setLevel(logging.DEBUG)
+
+        logger.debug("==> Building model..")
         self.build_model()
 
     def build_model(self):
@@ -86,7 +96,7 @@ class Trainer(object):
         self.student.apply(weights_init_student)
 
     def train(self, start_epoch=0, total_iters=0):
-        print("Starting Training Loop...")
+        logger.debug("Starting Training Loop...")
         start_time = time.time()
         best_valid_loss = np.inf
         for epoch in range(start_epoch, start_epoch + self.args.total_epochs):
@@ -216,7 +226,7 @@ def train_epoch(
     total_loss = cum_loss / (batch_idx + 1)
     if np.mod(epoch, 10) == 0:
 
-        print(
+        logger.info(
             "Epoch: "
             + str(epoch)
             + " | "
