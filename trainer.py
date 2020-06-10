@@ -75,7 +75,14 @@ class Trainer(object):
         self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(
             self.optimizer, "min", patience=50, verbose=True, factor=0.9
         )
-        # self.get_reg_dist()
+        self.records = {
+            "lr": [],
+            "noise_level": [],
+            "train_loss": [],
+            "val_loss": [],
+        }
+
+        self.metadata = vars(self.args)
 
     def get_loss(self):
         if self.args.loss == "mmd_noise_injection":
@@ -118,6 +125,14 @@ class Trainer(object):
                 "valid",
                 device=self.device,
             )
+
+            self.records["train_loss"].append(train_loss)
+            self.records["val_loss"].append(valid_loss)
+            self.records["lr"].append(self.optimizer.param_groups[0]["lr"])
+            self.records["noise_level"].append(
+                self.student.linear1.noise_level
+            )
+
             if not np.isfinite(train_loss):
                 break
 

@@ -1,11 +1,47 @@
 import yaml
+import json
 import torch
+import subprocess
+import time
 
 import argparse
 
+from pathlib import Path
 from trainer import Trainer
 
+mmd_folder = Path(__file__).parent
+
 torch.backends.cudnn.benchmark = True
+
+
+def _get_results_file(results_dir):
+    results_dir.mkdir(exist_ok=True)
+    results_file = results_dir / 'results.json'
+    if not results_file.exists():
+        with open(results_file, "w") as f:
+            json.dump({}, f)
+    return results_file
+
+
+def _append_to_results_file(exp, results_dir):
+    results_file = _get_results_file(results_dir)
+    commit_hash = subprocess.check_output(
+        ["git", "-C", mmd_folder, "rev-parse", "HEAD"]
+    )
+    commit_hash = commit_hash.decode().strip("\n")
+    this_exp_results = {
+        "metadata": exp.metadata,
+        "records": exp.records,
+        "time": int(time.time()),
+        "commit_hash": commit_hash
+    }
+    with open(results_file, "r") as f:
+        results = json.load(f)
+
+    results[len(results)] = this_exp_results
+
+    with open(results_file, 'w') as f:
+        json.dump(results, f)
 
 
 def make_flags(args, config_file):
@@ -91,6 +127,17 @@ parser.add_argument("--log_dir", default="", type=str, help="log directory ")
 parser.add_argument("--log_name", default="mmd", type=str, help="log name")
 parser.add_argument(
     "--log_in_file", action="store_true", help="to log output on a file"
+)
+parser.add_argument(
+    "--results_dir",
+    default="",
+    type=str,
+    help="directory to store the training metrics",
+)
+parser.add_argument(
+    "--store_results",
+    action="store_true",
+    help="whether to store the training metrics or not",
 )
 
 # Network parameters
@@ -179,3 +226,11 @@ args = make_flags(args, args.config)
 
 exp = Trainer(args)
 exp.train()
+
+
+if args.store_results:
+    assert args.results_dir != ''
+    # XXX: this will create race conditions if ``python
+    # train_student_teacher.py`` was to be dispatched on multiplle nodes of a
+    # cluster.
+    _append_to_results_file(exp, Path(args.results_dir))
