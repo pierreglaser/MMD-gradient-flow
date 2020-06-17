@@ -96,7 +96,11 @@ class Trainer(object):
 
     def get_loss(self):
         if self.args.loss == "mmd_noise_injection":
-            return MMD(self.student, self.args.with_noise)
+            return MMD(
+                self.student,
+                self.args.with_noise,
+                self.args.inject_noise_in_prediction,
+            )
         elif self.args.loss == "mmd_diffusion":
             return MMD_Diffusion(self.student)
         elif self.args.loss == "sobolev":

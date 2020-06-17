@@ -105,14 +105,20 @@ class sobolev(autograd.Function):
 
 
 class MMD(nn.Module):
-    def __init__(self, student, with_noise):
+    def __init__(self, student, with_noise, inject_noise_in_prediction):
         super(MMD, self).__init__()
         self.student = student
         self.mmd2 = mmd2_noise_injection.apply
         self.with_noise = with_noise
+        self.inject_noise_in_prediction = inject_noise_in_prediction
 
     def forward(self, x, y):
         if self.with_noise:
+            if self.inject_noise_in_prediction:
+                self.student.set_noisy_mode(True)
+            else:
+                # XXX: not needed?
+                self.student.set_noisy_mode(False)
             out = tr.mean(self.student(x), dim=-1).clone().detach()
             self.student.set_noisy_mode(True)
             noisy_out = self.student(x)

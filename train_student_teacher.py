@@ -83,6 +83,14 @@ parser.add_argument(
     type=bool,
     help="to use noise injection set to true",
 )
+
+parser.add_argument(
+    "--inject_noise_in_prediction",
+    action="store_true",
+    help=("use noise injection also when predicting (and not only in the "
+          "gradient)"),
+)
+
 parser.add_argument(
     "--noise_level",
     default=1.0,
