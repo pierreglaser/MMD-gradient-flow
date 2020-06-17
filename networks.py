@@ -13,7 +13,7 @@ def register_non_linearity(module: nn.Module):
 def get_non_linearity(name: str):
     module = _NON_LINEARITY_MODULES.get(name, None)
     if module is None:
-        raise ValueError(f'unknown non linearity: {name}')
+        raise ValueError(f"unknown non linearity: {name}")
     else:
         return module()
 

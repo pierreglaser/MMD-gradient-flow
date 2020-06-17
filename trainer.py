@@ -181,11 +181,7 @@ def get_net(args, dtype, device, net_type):
         )
         if args.teacher_net == "OneHidden":
             Net = OneHiddenLayer(
-                args.d_int,
-                args.H,
-                args.d_out,
-                non_linearity,
-                bias=args.bias,
+                args.d_int, args.H, args.d_out, non_linearity, bias=args.bias,
             )
     if net_type == "student":
         weights_init_net = partial(
