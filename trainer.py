@@ -15,8 +15,18 @@ import sys, os, time, itertools
 from networks import *
 from losses import *
 
+try:
+    from tqdm import tqdm, trange
+except ImportError:
 
-logger = logging.getLogger('mmd_gradient_flow')
+    def tqdm(x):
+        return x
+
+    def trange(x):
+        return x
+
+
+logger = logging.getLogger("mmd_gradient_flow")
 
 
 class Trainer(object):
@@ -49,7 +59,7 @@ class Trainer(object):
             logger.addHandler(logging.FileHandler(self.log_file))
         else:
             logger.addHandler(logging.StreamHandler())
-        logger.setLevel(logging.DEBUG)
+        logger.setLevel(getattr(logging, args.log_level))
 
         logger.debug("==> Building model..")
         self.build_model()
@@ -106,7 +116,10 @@ class Trainer(object):
         logger.debug("Starting Training Loop...")
         start_time = time.time()
         best_valid_loss = np.inf
-        for epoch in range(start_epoch, start_epoch + self.args.total_epochs):
+        r = range(start_epoch, start_epoch + self.args.total_epochs)
+        if getattr(logging, self.args.log_level) > logging.INFO:
+            r = tqdm(r)
+        for epoch in r:
             total_iters, train_loss = train_epoch(
                 epoch,
                 total_iters,
@@ -143,6 +156,10 @@ class Trainer(object):
             if np.mod(epoch, self.args.noise_decay_freq) == 0 and epoch > 0:
                 self.loss.student.update_noise_level()
             if np.mod(epoch, 10) == 0:
+                if hasattr(r, "set_description"):
+                    r.set_description(
+                        f"train {train_loss:.3f}, valid: {valid_loss:.3f}"
+                    )
                 new_time = time.time()
 
                 start_time = new_time
@@ -247,6 +264,6 @@ def train_epoch(
             + " | "
             + phase
             + " loss: "
-            + str(round(total_loss, 3))
+            + str(round(total_loss, 5))
         )
     return total_iters, total_loss
