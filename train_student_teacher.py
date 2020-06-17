@@ -132,6 +132,7 @@ parser.add_argument(
     help="seed for the random number generator on pytorch",
 )
 parser.add_argument("--log_dir", default="", type=str, help="log directory ")
+parser.add_argument("--log_level", default="DEBUG", type=str, help="log level")
 parser.add_argument("--log_name", default="mmd", type=str, help="log name")
 parser.add_argument(
     "--log_in_file", action="store_true", help="to log output on a file"
