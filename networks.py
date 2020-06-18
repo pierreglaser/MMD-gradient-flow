@@ -30,6 +30,30 @@ class quadexp(nn.Module):
 register_non_linearity(quadexp)
 
 
+class laplace(nn.Module):
+    def __init__(self, lambda_=2.0):
+        super(laplace, self).__init__()
+        self.lambda_ = lambda_
+
+    def forward(self, x: tr.Tensor):
+        return tr.exp(-self.lambda_ * tr.abs(x))
+
+
+register_non_linearity(laplace)
+
+
+class imq(nn.Module):
+    def __init__(self, c=1.0):
+        super(imq, self).__init__()
+        self.c = c
+
+    def forward(self, x: tr.Tensor):
+        return 1 / (self.c ** 2 + x ** 2)
+
+
+register_non_linearity(imq)
+
+
 class cosine(nn.Module):
     def __init__(self):
         super(cosine, self).__init__()
