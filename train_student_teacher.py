@@ -9,7 +9,7 @@ import argparse
 from pathlib import Path
 from trainer import Trainer
 
-mmd_folder = Path(__file__).parent
+MMD_FOLDER = Path(__file__).parent
 
 torch.backends.cudnn.benchmark = True
 
@@ -23,10 +23,9 @@ def _get_results_file(results_dir):
     return results_file
 
 
-def _append_to_results_file(exp, results_dir):
-    results_file = _get_results_file(results_dir)
+def _make_result_dict(exp):
     commit_hash = subprocess.check_output(
-        ["git", "-C", mmd_folder, "rev-parse", "HEAD"]
+        ["git", "-C", MMD_FOLDER, "rev-parse", "HEAD"]
     )
     commit_hash = commit_hash.decode().strip("\n")
     this_exp_results = {
@@ -35,6 +34,11 @@ def _append_to_results_file(exp, results_dir):
         "time": int(time.time()),
         "commit_hash": commit_hash
     }
+    return this_exp_results
+
+
+def _append_to_results_file(this_exp_results, results_dir):
+    results_file = _get_results_file(results_dir)
     with open(results_file, "r") as f:
         results = json.load(f)
 
@@ -51,6 +55,21 @@ def make_flags(args, config_file):
         all(map(dic.pop, config))
         dic.update(config)
     return args
+
+
+def run_mmd_flow(args):
+    exp = Trainer(**vars(args), all_args=args)
+    exp.train()
+
+    results = _make_result_dict(exp)
+
+    if args.store_results:
+        assert args.results_dir != ''
+        # XXX: this will create race conditions if ``python
+        # train_student_teacher.py`` was to be dispatched on multiplle nodes of
+        # a cluster.
+        _append_to_results_file(results, Path(args.results_dir))
+    return results
 
 
 parser = argparse.ArgumentParser(
@@ -229,17 +248,7 @@ parser.add_argument(
     help="config file for non default parameters",
 )
 
-args = parser.parse_args()
-args = make_flags(args, args.config)
-
-
-exp = Trainer(args)
-exp.train()
-
-
-if args.store_results:
-    assert args.results_dir != ''
-    # XXX: this will create race conditions if ``python
-    # train_student_teacher.py`` was to be dispatched on multiplle nodes of a
-    # cluster.
-    _append_to_results_file(exp, Path(args.results_dir))
+if __name__ == "__main__":
+    args = parser.parse_args()
+    args = make_flags(args, args.config)
+    run_mmd_flow(args)
