@@ -58,7 +58,7 @@ def make_flags(args, config_file):
 
 
 def run_mmd_flow(args):
-    exp = Trainer(**vars(args), all_args=args)
+    exp = Trainer(args)
     exp.train()
 
     results = _make_result_dict(exp)
