@@ -25,6 +25,21 @@ except ImportError:
     def trange(x):
         return x
 
+try:
+    import distributed
+    HAS_DISTRIBUTED = True
+except ImportError:
+    distributed = None
+    HAS_DISTRIBUTED = False
+
+
+def _in_dask_worker():
+    if HAS_DISTRIBUTED:
+        from distributed.utils import thread_state
+        return hasattr(thread_state, "execution_state")
+    else:
+        return False
+
 
 logger = logging.getLogger("mmd_gradient_flow")
 
@@ -122,7 +137,8 @@ class Trainer(object):
         best_valid_loss = np.inf
         r = range(start_epoch, start_epoch + self.args.total_epochs)
         if getattr(logging, self.args.log_level) > logging.INFO:
-            r = tqdm(r)
+            if not _in_dask_worker():
+                r = tqdm(r)
         for epoch in r:
             total_iters, train_loss = train_epoch(
                 epoch,
