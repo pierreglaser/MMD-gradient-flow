@@ -1,20 +1,14 @@
 import itertools
 import socket
-import pprint
-import logging
-import os
-import re
-import subprocess
 
 from pathlib import Path
-from distributed import Client
+from distributed import Client, LocalCluster
 from dask.distributed import as_completed
 
 from train_student_teacher import parser, run_mmd_flow, _append_to_results_file
 from distributed_slurm import get_sbatch_args
 
 from dask_jobqueue import SLURMCluster
-from distributed import Client
 
 N = 100
 
@@ -31,32 +25,41 @@ def format_args(N, non_linearity, lr, n_epochs, seed, noise_level, dim):
     )
     return args
 
+
 def make_cluster():
     if socket.gethostname() != 'sgw1':
-        raise ValueError('not a slurm cluster')
-
-    proc_per_worker = 4
-    max_workers = 20
-    cluster = SLURMCluster(
-        workers=0,  # number of (initial slurm jobs)
-        memory="16GB",
-        # cores = number of dask Worker processes lauched. I want only 1 dask.Worker per distributed worker.
-        cores=1,
-        extra=[f'--nthreads {proc_per_worker} --nprocs=1'],  # arguments to dask-worker CLI
-        job_extra=[get_sbatch_args(max_workers, proc_per_worker)],# -w {node} ']  # arguments to sbatch
-    )
-    cluster.scale(20)
+        proc_per_worker = 4
+        max_workers = 20
+        cluster = SLURMCluster(
+            workers=0,  # number of (initial slurm jobs)
+            memory="16GB",
+            # cores = number of dask Worker processes lauched. I want only 1
+            # dask.Worker per distributed worker.
+            cores=1,
+            # arguments to dask-worker CLI
+            extra=[f'--nthreads {proc_per_worker} --nprocs=1'],
+            # arguments to sbatch
+            job_extra=[get_sbatch_args(max_workers, proc_per_worker)],
+        )
+        cluster.scale(20)
+    else:
+        cluster = LocalCluster(
+            workers=2, memory="2GB", cores=1, threads_per_worker=1
+        )
     return cluster
 
 
 if __name__ == "__main__":
+    n_epochs = 100
+
     entries = [
-        {"n_epochs": 10000, "N": 100, "non_linearity": "quadexp", "lr": 0.1},
-        {"n_epochs": 10000, "N": 100, "non_linearity": "power", "lr": 0.0001},
-        {"n_epochs": 10000, "N": 100, "non_linearity": "cosine", "lr": 0.0001},
-        {"n_epochs": 10000, "N": 100, "non_linearity": "laplace", "lr": 0.1},
-        {"n_epochs": 10000, "N": 100, "non_linearity": "imq", "lr": 0.1},
+        {"n_epochs": n_epochs, "N": 100, "non_linearity": "quadexp", "lr": 0.1},  # noqa
+        {"n_epochs": n_epochs, "N": 100, "non_linearity": "power", "lr": 0.0001},  # noqa
+        {"n_epochs": n_epochs, "N": 100, "non_linearity": "cosine", "lr": 0.0001},  # noqa
+        {"n_epochs": n_epochs, "N": 100, "non_linearity": "laplace", "lr": 0.1},  # noqa
+        {"n_epochs": n_epochs, "N": 100, "non_linearity": "imq", "lr": 0.1},  # noqa
     ]
+
     seeds = range(5)
     noise_levels = [0, 1]
     dims = [2, 20, 50, 100]
