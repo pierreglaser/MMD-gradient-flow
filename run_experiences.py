@@ -33,20 +33,32 @@ def format_args(N, non_linearity, lr, n_epochs, seed, noise_level, dim):
 
 def make_cluster():
     if socket.gethostname() == 'sgw1':
-        proc_per_worker = 4
-        max_workers = 20
+
+        # number of processing units per node. for ease of use, cores to the
+        # number of CPU per node warning: this is the unitary increment by
+        # which you can scale your number of workers inside your cluster.
+        proc_per_worker = 24
+
+        # total number of slurm node to request. Max number of dask workers
+        # will be proc_per_worker * max_slurm_nodes
+        max_slurm_nodes = 4
+
         cluster = SLURMCluster(
             workers=0,  # number of (initial slurm jobs)
             memory="16GB",
-            # cores = number of dask Worker processes lauched. I want only 1
-            # dask.Worker per distributed worker.
-            cores=1,
-            # arguments to dask-worker CLI
-            extra=[f'--nthreads {proc_per_worker} --nprocs=1'],
-            # arguments to sbatch
-            job_extra=[get_sbatch_args(max_workers, proc_per_worker)],
+            # cores = number processing units per worker, can be
+            # dask.Worker (processes) or threads of a worker's
+            # ThreadPoolExecutor
+            cores=proc_per_worker,
+            # among those $cores workers, how many should be dask Workers,
+            # (each worker will then have cores // processes threads inside
+            # their ThreadPoolExecutor)
+            # sets cpus-per-task=processes inside batch script
+            processes=proc_per_worker,
+            # job_extra=[get_sbatch_args(max_workers, proc_per_worker)],
         )
-        cluster.scale(20)
+        # scale the number of unitary dask workers (and not batch jobs)
+        cluster.scale(96)
     else:
         cluster = LocalCluster(
             n_workers=2, threads_per_worker=1, processes=False,
@@ -89,7 +101,7 @@ def _write_result(result_queue):
 
 
 if __name__ == "__main__":
-    n_epochs = 2000
+    n_epochs = 10000
 
     entries = [
         {"n_epochs": n_epochs, "N": 100, "non_linearity": "quadexp", "lr": 0.1},  # noqa
