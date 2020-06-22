@@ -6,7 +6,7 @@ from distributed import Client, LocalCluster
 from dask.distributed import as_completed
 
 from train_student_teacher import parser, run_mmd_flow, _append_to_results_file
-from distributed_slurm import get_sbatch_args
+from slurm_utils import get_sbatch_args
 
 from dask_jobqueue import SLURMCluster
 
