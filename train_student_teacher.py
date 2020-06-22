@@ -9,14 +9,20 @@ import argparse
 from pathlib import Path
 from trainer import Trainer
 
+try:
+    from joblib import Memory
+    memory = Memory('')
+except ImportError:
+    pass
+
 MMD_FOLDER = Path(__file__).parent
 
 torch.backends.cudnn.benchmark = True
 
 
-def _get_results_file(results_dir):
+def _get_results_file(results_dir, extension='json'):
     results_dir.mkdir(exist_ok=True)
-    results_file = results_dir / 'results.json'
+    results_file = results_dir / f'results.{extension}'
     if not results_file.exists():
         with open(results_file, "w") as f:
             json.dump({}, f)
@@ -37,17 +43,6 @@ def _make_result_dict(exp):
     return this_exp_results
 
 
-def _append_to_results_file(this_exp_results, results_dir):
-    results_file = _get_results_file(results_dir)
-    with open(results_file, "r") as f:
-        results = json.load(f)
-
-    results[len(results)] = this_exp_results
-
-    with open(results_file, 'w') as f:
-        json.dump(results, f)
-
-
 def make_flags(args, config_file):
     if config_file:
         config = yaml.load(open(config_file))
@@ -65,10 +60,7 @@ def run_mmd_flow(args):
 
     if args.store_results:
         assert args.results_dir != ''
-        # XXX: this will create race conditions if ``python
-        # train_student_teacher.py`` was to be dispatched on multiplle nodes of
-        # a cluster.
-        _append_to_results_file(results, Path(args.results_dir))
+        raise NotImplementedError
     return results
 
 

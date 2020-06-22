@@ -1,14 +1,19 @@
 import itertools
 import socket
+import threading
+import queue
 
 from pathlib import Path
+
+import pandas as pd
+
 from distributed import Client, LocalCluster
 from dask.distributed import as_completed
+from dask_jobqueue import SLURMCluster
 
-from train_student_teacher import parser, run_mmd_flow, _append_to_results_file
+from train_student_teacher import parser, run_mmd_flow, _get_results_file
 from slurm_utils import get_sbatch_args
 
-from dask_jobqueue import SLURMCluster
 
 N = 100
 
@@ -44,13 +49,47 @@ def make_cluster():
         cluster.scale(20)
     else:
         cluster = LocalCluster(
-            workers=2, memory="2GB", cores=1, threads_per_worker=1
+            n_workers=2, threads_per_worker=1, processes=False,
+            dashboard_address=':7777'
         )
     return cluster
 
 
+def _make_result_df_entry(result, result_id, make_df=False):
+    names = sorted(result["metadata"]) + ["commit_hash", "time", "id"]
+
+    idx = [result["metadata"][k] for k in sorted(result["metadata"])] + [
+        result["commit_hash"],
+        result["time"],
+        int(result_id),
+    ]
+    df = pd.DataFrame(result["records"])
+    df.index.name = 'iter_no'
+    if make_df:
+        return pd.concat([df], keys=(tuple(idx),), names=names)
+    else:
+        return df, idx, names
+
+
+def _write_result(result_queue):
+    write_done = 0
+    while write_done < len(fs):
+        result = result_queue.get()
+        result = _make_result_df_entry(result, write_done, make_df=True)
+
+        file_ = _get_results_file(Path('./results'), extension='csv')
+
+        if write_done == 0:
+            result.to_csv(file_, mode='w', header=True)
+        else:
+            result.to_csv(file_, mode='a', header=False)
+
+        write_done += 1
+        print('wrote result no', write_done)
+
+
 if __name__ == "__main__":
-    n_epochs = 100
+    n_epochs = 2000
 
     entries = [
         {"n_epochs": n_epochs, "N": 100, "non_linearity": "quadexp", "lr": 0.1},  # noqa
@@ -76,6 +115,12 @@ if __name__ == "__main__":
         seeds, entries, noise_levels, dims, noise_in_predictions
     ))
     print('total number of configs', len(all_configs))
+
+    result_queue = queue.Queue()
+    writer_thread = threading.Thread(
+        target=_write_result, args=(result_queue, )
+    )
+
     for seed, entry, noise_level, dim, noise_in_prediction in all_configs:
         args = format_args(
             seed=seed, noise_level=noise_level, dim=dim, **entry
@@ -85,12 +130,18 @@ if __name__ == "__main__":
         f = client.submit(run_mmd_flow, args)
         fs.append(f)
 
+    writer_thread.start()
+
     done = 0
     for future in as_completed(fs, raise_errors=False):
         try:
             result = future.result()
             done += 1
             print('number of runs lefts: {}'.format(len(all_configs) - done))
-            _append_to_results_file(result, Path('./results'))
+            result_queue.put(result)
         except Exception:
+            print('something wrong happened for result', done)
             continue
+
+    print('all results done, joining writer thread...')
+    writer_thread.join()
