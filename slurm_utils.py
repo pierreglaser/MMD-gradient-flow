@@ -1,13 +1,9 @@
-import pprint
-import logging
-import os
 import re
 import subprocess
 
-from dask_jobqueue import SLURMCluster
-from distributed import Client
 
 CPUS_PER_NODE = 24
+
 
 def get_sbatch_args(n_workers, proc_per_worker):
     """generates the slurm args to use an optimal number of nodes given the
@@ -16,7 +12,7 @@ def get_sbatch_args(n_workers, proc_per_worker):
     num_nodes = (n_workers * proc_per_worker) // CPUS_PER_NODE + 1
 
     # cmd = f"sinfo -N | grep node | grep idle | grep cpu | cut -d' ' -f 1"
-    cmd = f"sinfo -N | grep cpu"
+    cmd = "sinfo -N | grep cpu"
     all_nodes = subprocess.check_output(cmd, shell=True)
     all_nodes = all_nodes.decode().strip().split(' \n')
 
