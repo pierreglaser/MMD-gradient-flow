@@ -27,7 +27,7 @@ def format_args(N, non_linearity, lr, n_epochs, seed, noise_level, dim):
 
 
 def make_cluster():
-    if socket.gethostname() != 'sgw1':
+    if socket.gethostname() == 'sgw1':
         proc_per_worker = 4
         max_workers = 20
         cluster = SLURMCluster(
