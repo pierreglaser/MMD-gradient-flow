@@ -120,7 +120,11 @@ class MMD(nn.Module):
                 # XXX: not needed?
                 self.student.set_noisy_mode(False)
             out = tr.mean(self.student(x), dim=-1).clone().detach()
-            self.student.set_noisy_mode(True)
+
+            if self.inject_noise_in_prediction:
+                self.student.set_noisy_mode(False)
+            else:
+                self.student.set_noisy_mode(True)
             noisy_out = self.student(x)
             loss = 0.5 * self.mmd2(y, out, noisy_out)
         else:
