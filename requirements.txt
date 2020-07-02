@@ -3,6 +3,6 @@ torchvision==0.4.0
 numpy==1.17.2
 pyyaml
 tensorboardX==1.8
-bokeh==2.0.0
+bokeh==2.0.1
 distributed
 dask-jobqueue
